@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="hu" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trackmania.io Trió Telemetria & Összehasonlító</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,600;0,700;1,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Chakra Petch', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            tm: {
+              bg: '#060911',
+              card: '#0e1422',
+              border: '#1e293b',
+              p1: '#00ff88',
+              p2: '#00e5ff',
+              p3: '#ff3366'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #060911;
+      color: #f8fafc;
+      background-image:
+        radial-gradient(circle at 12% 8%, rgba(0, 255, 136, 0.06) 0%, transparent 35%),
+        radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.06) 0%, transparent 35%),
+        radial-gradient(circle at 88% 8%, rgba(255, 51, 102, 0.06) 0%, transparent 35%);
+      min-height: 100vh;
+    }
+    .medal-AT { background: linear-gradient(135deg, #00e676, #00701a); color: #000; box-shadow: 0 0 10px rgba(0,230,118,0.3); }
+    .medal-GOLD { background: linear-gradient(135deg, #ffd700, #d97706); color: #000; }
+    .medal-SILVER { background: linear-gradient(135deg, #e2e8f0, #64748b); color: #000; }
+    .medal-BRONZE { background: linear-gradient(135deg, #fb923c, #7c2d12); color: #fff; }
+    .tier-White { border-left: 4px solid #f8fafc; }
+    .tier-Green { border-left: 4px solid #22c55e; }
+    .tier-Blue { border-left: 4px solid #3b82f6; }
+    .tier-Red { border-left: 4px solid #ef4444; }
+    .tier-Black { border-left: 4px solid #a855f7; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #060911; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+  </style>
+</head>
+<body class="antialiased pb-24 md:pb-12 select-none">
+
+  <!-- FELSŐ NAVIGÁCIÓS FEJLÉC -->
+  <header class="sticky top-0 z-40 bg-tm-card/95 backdrop-blur-md border-b border-tm-border">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-tm-p1 via-tm-p2 to-tm-p3 p-0.5 shadow-lg">
+          <div class="w-full h-full bg-tm-bg rounded-[10px] flex items-center justify-center font-display font-bold text-sm text-white">
+            TM.io
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-display font-bold text-base md:text-lg tracking-wider text-white leading-none">
+              TRACKMANIA.IO TRIÓ TELEMETRIA
+            </h1>
+            <span class="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              LIVE API
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="statusIndicatorDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="statusText" class="text-[11px] font-mono text-slate-400">Csatlakozás a Trackmania.io szerveréhez...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Asztali Fülek -->
+      <nav class="hidden lg:flex items-center bg-slate-950/90 p-1 rounded-xl border border-slate-800">
+        <button onclick="switchTab('profiles')" id="dtab-profiles" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+          <i class="fa-solid fa-id-card mr-1.5"></i>Profil & Zóna Rangsor
+        </button>
+        <button onclick="switchTab('campaign')" id="dtab-campaign" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+          <i class="fa-solid fa-flag-checkered mr-1.5"></i>Kampány & Pálya Idők
+        </button>
+        <button onclick="switchTab('cotd')" id="dtab-cotd" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+          <i class="fa-solid fa-trophy mr-1.5"></i>COTD & Ranked 3v3
+        </button>
+        <button onclick="switchTab('trophies')" id="dtab-trophies" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all">
+          <i class="fa-solid fa-gem mr-1.5"></i>Trófeák (T1–T9)
+        </button>
+      </nav>
+
+      <!-- Jobb oldali vezérlők -->
+      <div class="flex items-center gap-2">
+        <button onclick="openConfigModal()" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300 flex items-center gap-1.5 transition-all" title="A 3 Trackmania.io Account ID beállítása">
+          <i class="fa-solid fa-users-gear text-tm-p2"></i>
+          <span class="hidden sm:inline">3 Pilóta ID</span>
+        </button>
+        <button onclick="syncFromTrackmaniaIo(true)" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-tm-p1 to-emerald-400 text-black font-display font-bold text-xs flex items-center gap-1.5 shadow-md shadow-tm-p1/10 active:scale-95 transition-all">
+          <i class="fa-solid fa-rotate" id="syncIcon"></i>
+          <span>Frissítés</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- FŐ TARTALOM -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Hibaüzenet sáv (ha az Account UUID hibás vagy a TM.io nem elérhető) -->
+    <div id="apiAlertBanner" class="hidden bg-amber-950/60 border border-amber-500/40 rounded-2xl p-4 text-xs text-amber-200 flex items-start justify-between gap-4">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base mt-0.5"></i>
+        <div>
+          <div class="font-bold text-amber-300" id="apiAlertTitle">Figyelem</div>
+          <div id="apiAlertDesc" class="mt-0.5 text-amber-200/80"></div>
+        </div>
+      </div>
+      <button onclick="openConfigModal()" class="px-3 py-1.5 rounded-lg bg-amber-400 text-black font-bold shrink-0">
+        Account ID-k Megadása
+      </button>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- 1. FÜL: PROFILOK, ZÓNA RANGLISTÁK (VILÁG / EURÓPA / MAGYARORSZÁG / MEGYE) -->
+    <!-- =================================================================== -->
+    <section id="view-profiles" class="space-y-6">
+      <!-- 3 Játékos Teljes Trackmania.io Profil Kártyája -->
+      <div id="trioProfileCards" class="grid grid-cols-1 lg:grid-cols-3 gap-5"></div>
+
+      <!-- Földrajzi Zóna Rangsor Összehasonlító Táblázat -->
+      <div class="bg-tm-card border border-tm-border rounded-2xl overflow-hidden">
+        <div class="p-4 md:p-5 border-b border-tm-border flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="font-display font-bold text-base md:text-lg text-white flex items-center gap-2">
+              <i class="fa-solid fa-earth-europe text-tm-p2"></i> TRACKMANIA.IO ZÓNA RANGLISTA ÖSSZEVETÉS
+            </h2>
+            <p class="text-xs text-slate-400">Hivatalos összetett rangsor pozíciók a Világ, Kontinens, Ország és Megye/Régió szintjén</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="border-b border-tm-border text-[11px] uppercase text-slate-400 bg-slate-950/60">
+                <th class="py-3.5 px-4">Földrajzi Zóna Szint</th>
+                <th class="py-3.5 px-4 text-right" id="zoneHeaderP1">Pilóta 1</th>
+                <th class="py-3.5 px-4 text-right" id="zoneHeaderP2">Pilóta 2</th>
+                <th class="py-3.5 px-4 text-right" id="zoneHeaderP3">Pilóta 3</th>
+                <th class="py-3.5 px-4 text-right">Trió Éllovas</th>
+              </tr>
+            </thead>
+            <tbody id="zoneComparisonBody" class="divide-y divide-slate-800/70"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 2. FÜL: SZEZONÁLIS KAMPÁNY & PÁLYÁNKÉNTI IDŐÖSSZEVETÉS (25 PÁLYA) -->
+    <!-- =================================================================== -->
+    <section id="view-campaign" class="hidden space-y-6">
+      <!-- Kampány Összesítő KPI sáv -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-tm-card border border-tm-border rounded-2xl p-4">
+          <div class="text-xs text-slate-400">Aktív Hivatalos Szezon</div>
+          <div class="font-display font-bold text-xl text-white mt-1" id="campTitleLabel">-</div>
+          <div class="text-[11px] font-mono text-emerald-400 mt-1" id="campTrackCountLabel">25 pálya</div>
+        </div>
+        <div class="bg-tm-card border border-tm-border rounded-2xl p-4 md:col-span-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span>Házi Pályarekordok (Koronák) & Összesített Kampányidő a 3 barát között</span>
+            <span id="sharedMapsBadge" class="font-mono text-slate-300">0 közös pálya</span>
+          </div>
+          <div id="campaignTrioSummaryRow" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+        </div>
+      </div>
+
+      <!-- Pálya Szűrők (Tier színskála szerint, ahogy a Trackmania.io-n van) -->
+      <div class="bg-tm-card border border-tm-border rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5" id="tierFilterButtons">
+          <button onclick="setTierFilter('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-black">Összes (1–25)</button>
+          <button onclick="setTierFilter('White')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border-l-4 border-white">White (1–5)</button>
+          <button onclick="setTierFilter('Green')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border-l-4 border-green-500">Green (6–10)</button>
+          <button onclick="setTierFilter('Blue')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border-l-4 border-blue-500">Blue (11–15)</button>
+          <button onclick="setTierFilter('Red')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border-l-4 border-red-500">Red (16–20)</button>
+          <button onclick="setTierFilter('Black')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border-l-4 border-purple-500">Black (21–25)</button>
+        </div>
+        <div class="text-xs font-mono text-slate-400">
+          Különbségek: <span class="text-emerald-400 font-bold">REKORD</span> vs <span class="text-rose-400">+Delta #1</span> • <span class="text-cyan-400">AT Delta</span>
+        </div>
+      </div>
+
+      <!-- 25 Pálya Részletes Trió Mátrixa -->
+      <div id="campaignTracksContainer" class="space-y-3.5"></div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 3. FÜL: CUP OF THE DAY (COTD) & RANKED 3v3 / ROYAL STATISZTIKÁK -->
+    <!-- =================================================================== -->
+    <section id="view-cotd" class="hidden space-y-6">
+      <!-- COTD Összehasonlító Kártyák -->
+      <div class="bg-tm-card border border-tm-border rounded-2xl p-5 space-y-4">
+        <div>
+          <h2 class="font-display font-bold text-lg text-white flex items-center gap-2">
+            <i class="fa-solid fa-trophy text-amber-400"></i> CUP OF THE DAY (COTD) TELJES ÖSSZEHASONLÍTÁS
+          </h2>
+          <p class="text-xs text-slate-400">A Trackmania.io `/player/{id}/cotd/0` végpontjának minden mutatója egymás mellett</p>
+        </div>
+        <div id="cotdComparisonGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- Ranked 3v3 Matchmaking & Royal Összevetés -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-tm-card border border-tm-border rounded-2xl p-5 space-y-4">
+          <h3 class="font-display font-bold text-base text-white flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved text-tm-p1"></i> 3v3 RANKED MATCHMAKING & ROYAL
+          </h3>
+          <div id="matchmakingCardsContainer" class="space-y-3"></div>
+        </div>
+
+        <!-- Legutóbbi COTD Kupák (Recent COTDs) -->
+        <div class="bg-tm-card border border-tm-border rounded-2xl p-5 space-y-4">
+          <h3 class="font-display font-bold text-base text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check text-tm-p2"></i> LEGUTÓBBI COTD EREDMÉNYEK (DÁTUM, DIVÍZIÓ, HELYEZÉS)
+          </h3>
+          <div id="recentCotdListContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- 4. FÜL: TRÓFEÁK (T1–T9 BREAKDOWN) ÉS LEGUTÓBBI TRÓFEASZERZÉSEK -->
+    <!-- =================================================================== -->
+    <section id="view-trophies" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- T1 - T9 Részletes Táblázat -->
+        <div class="lg:col-span-2 bg-tm-card border border-tm-border rounded-2xl overflow-hidden">
+          <div class="p-5 border-b border-tm-border">
+            <h2 class="font-display font-bold text-lg text-white flex items-center gap-2">
+              <i class="fa-solid fa-gem text-purple-400"></i> TRÓFEA SZINTEK RÉSZLETES LEBONTÁSA (TROPHY 1 – 9)
+            </h2>
+            <p class="text-xs text-slate-400">Pontosan ahogy a Trackmania.io profiloldalon szerepel (T1 = 1p ... T9 = 100.000.000p)</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-tm-border text-[11px] uppercase text-slate-400 bg-slate-950/60">
+                  <th class="py-3 px-4">Trófea Szint</th>
+                  <th class="py-3 px-4">Érték</th>
+                  <th class="py-3 px-4 text-right" id="trCol1">Pilóta 1</th>
+                  <th class="py-3 px-4 text-right" id="trCol2">Pilóta 2</th>
+                  <th class="py-3 px-4 text-right" id="trCol3">Pilóta 3</th>
+                </tr>
+              </thead>
+              <tbody id="trophyBreakdownTableBody" class="divide-y divide-slate-800/70 font-mono text-xs"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Legutóbbi Trófeaszerzések & Grafikon -->
+        <div class="bg-tm-card border border-tm-border rounded-2xl p-5 flex flex-col justify-between space-y-6">
+          <div>
+            <h3 class="font-display font-bold text-sm uppercase tracking-wider text-slate-300 mb-3">
+              Trófea Megoszlás (T4–T8)
+            </h3>
+            <canvas id="trophyBarChart" height="220"></canvas>
+          </div>
+          <div class="pt-4 border-t border-tm-border">
+            <h3 class="font-display font-bold text-xs uppercase tracking-wider text-slate-300 mb-2.5">
+              Legutóbbi Trófeaszerzések (TM.io Feed)
+            </h3>
+            <div id="recentTrophyGainsFeed" class="space-y-2 max-h-60 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MOBIL ALSÓ NAVIGÁCIÓS SÁV -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-tm-card/95 backdrop-blur-lg border-t border-tm-border z-40 grid grid-cols-4 py-2 px-1">
+    <button onclick="switchTab('profiles')" id="mtab-profiles" class="flex flex-col items-center justify-center py-1">
+      <i class="fa-solid fa-id-card text-sm"></i>
+      <span class="text-[10px] mt-1 font-semibold">Profil & Zóna</span>
+    </button>
+    <button onclick="switchTab('campaign')" id="mtab-campaign" class="flex flex-col items-center justify-center py-1">
+      <i class="fa-solid fa-flag-checkered text-sm"></i>
+      <span class="text-[10px] mt-1 font-semibold">Kampány (25)</span>
+    </button>
+    <button onclick="switchTab('cotd')" id="mtab-cotd" class="flex flex-col items-center justify-center py-1">
+      <i class="fa-solid fa-trophy text-sm"></i>
+      <span class="text-[10px] mt-1 font-semibold">COTD & 3v3</span>
+    </button>
+    <button onclick="switchTab('trophies')" id="mtab-trophies" class="flex flex-col items-center justify-center py-1">
+      <i class="fa-solid fa-gem text-sm"></i>
+      <span class="text-[10px] mt-1 font-semibold">Trófeák</span>
+    </button>
+  </nav>
+
+  <!-- 3 PILÓTA ACCOUNT ID BEÁLLÍTÓ MODAL -->
+  <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-tm-card border border-tm-border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-tm-border flex items-center justify-between bg-slate-950/60">
+        <h3 class="font-display font-bold text-base text-white flex items-center gap-2">
+          <i class="fa-solid fa-users-gear text-tm-p1"></i> A 3 TRACKMANIA.IO ACCOUNT ID BEÁLLÍTÁSA
+        </h3>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form onsubmit="savePlayerIds(event)" class="p-5 space-y-4">
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Nyisd meg a <a href="https://trackmania.io/#/players" target="_blank" class="text-tm-p2 underline">trackmania.io/#/players</a> oldalt, keresd meg a neveteket, és másold be az URL-ben található 36 karakteres <strong>Account ID (UUID)</strong> azonosítótokat!
+        </p>
+        <div>
+          <label class="block text-xs font-semibold text-tm-p1 mb-1">1. Pilóta Trackmania.io Account UUID</label>
+          <input type="text" id="inputP1Id" required placeholder="pl. 26d9a7de-4067-4926-9d93-2fe622869fc7" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-tm-p1 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-tm-p2 mb-1">2. Pilóta Trackmania.io Account UUID</label>
+          <input type="text" id="inputP2Id" required placeholder="pl. d320a238-1f3a-4668-a770-7218b6204c59" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-tm-p2 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-tm-p3 mb-1">3. Pilóta Trackmania.io Account UUID</label>
+          <input type="text" id="inputP3Id" required placeholder="pl. 58c38c8e-9b7a-4e36-8a45-4c876e57b654" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-tm-p3 focus:outline-none">
+        </div>
+        <div class="pt-2 flex gap-3">
+          <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-tm-p1 to-emerald-400 text-black font-display font-bold text-xs rounded-xl">
+            MENTÉS & ÉLŐ LEKÉRDEZÉS A TM.IO-RÓL
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. ÁLLAPOT ÉS ALAPÉRTELMEZETT ACCOUNT UUID-K
+    // =========================================================================
+    const STORAGE_IDS_KEY = "tmio_trio_account_ids_v2";
+
+    // Ide közvetlenül is beírhatod a 3-atok végleges Trackmania.io UUID-ját:
+    const DEFAULT_TRIO_IDS = [
+      "26d9a7de-4067-4926-9d93-2fe622869fc7",
+      "d320a238-1f3a-4668-a770-7218b6204c59",
+      "58c38c8e-9b7a-4e36-8a45-4c876e57b654"
+    ];
+
+    let appState = {
+      playerIds: loadSavedIds(),
+      data: null,
+      tierFilter: "ALL",
+      trophyChart: null
+    };
+
+    function loadSavedIds() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_IDS_KEY));
+        if (Array.isArray(saved) && saved.length === 3) return saved;
+      } catch {}
+      return [...DEFAULT_TRIO_IDS];
+    }
+
+    // =========================================================================
+    // 2. TRACKMANIA SZÍNKÓD ($f00, $s, $w) PARSER ÉS IDŐ FORMÁZÓK
+    // =========================================================================
+    function formatTmStringToHtml(raw) {
+      if (!raw) return "";
+      // Megtisztítjuk a vezérlőkódokat, de a 3-jegyű hex színeket ($0f8) HTML span-re alakítjuk
+      let clean = raw.replace(/\$[iIoOwWnNmMgGzZ<>sStT]/g, "");
+      const parts = clean.split(/(\$[0-9a-fA-F]{3})/g);
+      let html = "";
+      let openSpan = false;
+      for (const part of parts) {
+        if (/^\$[0-9a-fA-F]{3}$/.test(part)) {
+          if (openSpan) html += "</span>";
+          const hex = part.slice(1).split("").map(c => c + c).join("");
+          html += `<span style="color:#${hex}">`;
+          openSpan = true;
+        } else {
+          html += part;
+        }
+      }
+      if (openSpan) html += "</span>";
+      return html;
+    }
+
+    function formatMs(ms) {
+      if (ms === null || ms === undefined || isNaN(ms)) return "--:--.---";
+      const mins = Math.floor(ms / 60000);
+      const secs = Math.floor((ms % 60000) / 1000);
+      const millis = ms % 1000;
+      return `${mins}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+    }
+
+    function formatDelta(ms) {
+      if (ms === 0) return "0.000s";
+      const sign = ms > 0 ? "+" : "-";
+      return `${sign}${(Math.abs(ms) / 1000).toFixed(3)}s`;
+    }
+
+    function formatNumber(n) {
+      if (n === null || n === undefined) return "-";
+      return Number(n).toLocaleString("hu-HU");
+    }
+
+    function getMedalType(timeMs, track) {
+      if (!timeMs) return null;
+      if (timeMs <= track.authorScore) return "AT";
+      if (timeMs <= track.goldScore) return "GOLD";
+      if (timeMs <= track.silverScore) return "SILVER";
+      if (timeMs <= track.bronzeScore) return "BRONZE";
+      return null;
+    }
+
+    // =========================================================================
+    // 3. ÉLŐ SZINKRONIZÁCIÓ A NETLIFY FUNCTIONÖN KERESZTÜL (TRACKMANIA.IO)
+    // =========================================================================
+    async function syncFromTrackmaniaIo(force = false) {
+      const icon = document.getElementById("syncIcon");
+      const dot = document.getElementById("statusIndicatorDot");
+      const statusText = document.getElementById("statusText");
+      const alertBanner = document.getElementById("apiAlertBanner");
+
+      icon.classList.add("fa-spin");
+      dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+      statusText.textContent = "Trackmania.io API lekérdezése folyamatban...";
+
+      const [p1, p2, p3] = appState.playerIds;
+      const query = `?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}&p3=${encodeURIComponent(p3)}${force ? "&force=1" : ""}`;
+
+      try {
+        const res = await fetch(`/.netlify/functions/tm-io-sync${query}`);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.error || `HTTP ${res.status}`);
+        }
+
+        const payload = await res.json();
+        if (payload.status !== "ok" || !payload.players) {
+          throw new Error(payload.error || "Érvénytelen válasz a Trackmania.io-tól");
+        }
+
+        appState.data = payload;
+        alertBanner.classList.add("hidden");
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        const timeStr = new Date(payload.fetchedAt).toLocaleTimeString("hu-HU");
+        statusText.textContent = `Trackmania.io Élő Adatok • Frissítve: ${timeStr}`;
+
+        renderEverything();
+      } catch (err) {
+        // Ha a felhasználó lokálisan (Netlify CLI nélkül) nyitja meg a fájlt, vagy még nem írt be valós ID-t,
+        // megmutatjuk a pontos Trackmania.io struktúrájú demonstrációs adatokat és a figyelmeztető sávot.
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        statusText.textContent = "Trackmania.io mintaadatok (Netlify Function / UUID beállításra vár)";
+        alertBanner.classList.remove("hidden");
+        document.getElementById("apiAlertTitle").textContent = "Trackmania.io API kapcsolat információ";
+        document.getElementById("apiAlertDesc").textContent =
+          `A szerveroldali lekérdezés üzenete: "${err.message}". Amint feltöltöd Netlify-ra és megadod a 3 valós Trackmania.io Account UUID-tokat, ez az oldal közvetlenül az élő profiljaitokat tölti be.`;
+
+        appState.data = getAuthenticTmioFallbackData();
+        renderEverything();
+      } finally {
+        setTimeout(() => icon.classList.remove("fa-spin"), 400);
+      }
+    }
+
+    // =========================================================================
+    // 4. NÉZETEK RENDERELÉSE (100% TRACKMANIA.IO ADATMEZŐKKEL)
+    // =========================================================================
+    function renderEverything() {
+      if (!appState.data) return;
+      renderProfilesAndZones();
+      renderCampaignComparison();
+      renderCotdAndMatchmaking();
+      renderTrophiesBreakdown();
+    }
+
+    // --- 4.1 PROFILOK ÉS ZÓNA RANGLISTÁK ---
+    function renderProfilesAndZones() {
+      const players = appState.data.players;
+
+      // Fejlécek frissítése
+      players.forEach((p, idx) => {
+        const el = document.getElementById(`zoneHeaderP${idx + 1}`);
+        if (el) {
+          el.textContent = p.displayName;
+          el.style.color = p.color;
+        }
+      });
+
+      // Trió Profil Kártyák
+      const cardsHtml = players.map((p, idx) => {
+        const worldZone = p.trophies.zones[p.trophies.zones.length - 1];
+        const countryZone = p.trophies.zones.length >= 2 ? p.trophies.zones[p.trophies.zones.length - 3] || p.trophies.zones[1] : null;
+        const regionZone = p.trophies.zones[0];
+
+        const clubTagHtml = p.clubTag
+          ? `<span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 font-mono text-xs">[${formatTmStringToHtml(p.clubTag)}]</span>`
+          : "";
+
+        const firstSeenDate = p.firstSeen ? new Date(p.firstSeen).toLocaleDateString("hu-HU") : "-";
+
+        return `
+          <div class="bg-tm-card border border-tm-border rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden" style="border-top: 3px solid ${p.color}">
+            <div>
+              <!-- Felső sor: Név, Klubtag, TM.io link -->
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="font-display font-bold text-2xl text-white">${p.displayName}</h2>
+                    ${clubTagHtml}
+                  </div>
+                  <div class="text-[11px] font-mono text-slate-500 mt-0.5 truncate max-w-[230px]" title="${p.accountId}">
+                    UUID: ${p.accountId}
+                  </div>
+                </div>
+                <a href="https://trackmania.io/#/player/${p.accountId}" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300 flex items-center gap-1 shrink-0">
+                  TM.io <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+              </div>
+
+              <!-- Össz Trófea Pont & Echelon -->
+              <div class="mt-4 p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <div class="text-[11px] text-slate-400 uppercase font-semibold">Trófea Pontszám</div>
+                  <div class="font-display font-bold text-xl text-white mt-0.5" style="color:${p.color}">
+                    ${formatNumber(p.trophies.points)} pt
+                  </div>
+                </div>
+                <div class="text-right font-mono">
+                  <span class="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-bold">
+                    Echelon ${p.trophies.echelon}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Gyors Zóna Rangsor Jelvények -->
+              <div class="grid grid-cols-3 gap-2 mt-3 text-center font-mono">
+                <div class="bg-slate-900/70 rounded-xl p-2 border border-slate-800/60">
+                  <div class="text-[10px] text-slate-400 truncate">${worldZone?.name || "World"}</div>
+                  <div class="text-xs font-bold text-white mt-0.5">#${formatNumber(worldZone?.position)}</div>
+                </div>
+                <div class="bg-slate-900/70 rounded-xl p-2 border border-slate-800/60">
+                  <div class="text-[10px] text-slate-400 truncate">${countryZone?.name || "Ország"}</div>
+                  <div class="text-xs font-bold text-emerald-400 mt-0.5">#${formatNumber(countryZone?.position)}</div>
+                </div>
+                <div class="bg-slate-900/70 rounded-xl p-2 border border-slate-800/60">
+                  <div class="text-[10px] text-slate-400 truncate">${regionZone?.name || "Régió"}</div>
+                  <div class="text-xs font-bold text-cyan-400 mt-0.5">#${formatNumber(regionZone?.position)}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alsó meta adatok -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Első megjelenés: <strong class="text-slate-300 font-mono">${firstSeenDate}</strong></span>
+              <div class="flex items-center gap-2 text-sm">
+                ${p.meta?.twitch ? `<a href="https://twitch.tv/${p.meta.twitch}" target="_blank" class="text-purple-400 hover:text-white"><i class="fa-brands fa-twitch"></i></a>` : ""}
+                ${p.meta?.youtube ? `<a href="https://youtube.com/${p.meta.youtube}" target="_blank" class="text-rose-400 hover:text-white"><i class="fa-brands fa-youtube"></i></a>` : ""}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.getElementById("trioProfileCards").innerHTML = cardsHtml;
+
+      // Zóna Ranglista Összehasonlító Táblázat (World, Continent, Country, Region)
+      // A Trackmania.io-n a zones tömb visszafelé haladva: [Régió(0), Ország(1), Kontinens(2), Világ(3)]
+      const maxDepth = Math.max(...players.map(p => p.trophies.zones.length));
+      const zoneRows = [];
+
+      for (let revIdx = 0; revIdx < maxDepth; revIdx++) {
+        // Hátulról (Világ -> Kontinens -> Ország -> Megye) haladunk
+        const zItems = players.map(p => {
+          const zList = p.trophies.zones;
+          const idx = zList.length - 1 - revIdx;
+          return idx >= 0 ? { player: p, zone: zList[idx] } : { player: p, zone: null };
+        });
+
+        const validPositions = zItems.filter(x => x.zone && x.zone.position).sort((a, b) => a.zone.position - b.zone.position);
+        const bestPlayer = validPositions[0]?.player || null;
+        const levelLabels = ["Világranglista (World)", "Kontinens (Continent)", "Országos Rangsor (Country)", "Megye / Régió (Subregion)"];
+        const rowTitle = levelLabels[revIdx] || "Helyi Zóna";
+
+        zoneRows.push(`
+          <tr class="hover:bg-slate-900/40">
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-white text-xs">${rowTitle}</div>
+              <div class="text-[11px] text-slate-400">${zItems.map(x => x.zone?.name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(" / ")}</div>
+            </td>
+            ${zItems.map(item => {
+              if (!item.zone || !item.zone.position) {
+                return `<td class="py-3.5 px-4 text-right font-mono text-xs text-slate-500">-</td>`;
+              }
+              const isBest = bestPlayer && bestPlayer.accountId === item.player.accountId;
+              return `
+                <td class="py-3.5 px-4 text-right font-mono">
+                  <span class="text-sm ${isBest ? "font-bold text-white" : "text-slate-300"}">#${formatNumber(item.zone.position)}</span>
+                  <div class="text-[10px] text-slate-500">${item.zone.name}</div>
+                </td>
+              `;
+            }).join("")}
+            <td class="py-3.5 px-4 text-right font-mono text-xs">
+              ${bestPlayer ? `<span class="px-2 py-1 rounded bg-slate-900 border border-slate-700 font-bold" style="color:${bestPlayer.color}"><i class="fa-solid fa-crown text-amber-400 mr-1"></i>${bestPlayer.displayName}</span>` : "-"}
+            </td>
+          </tr>
+        `);
+      }
+
+      document.getElementById("zoneComparisonBody").innerHTML = zoneRows.join("");
+    }
+
+    // --- 4.2 SZEZONÁLIS KAMPÁNY & 25 PÁLYÁS IDŐÖSSZEVETÉS ---
+    function setTierFilter(tier) {
+      appState.tierFilter = tier;
+      document.querySelectorAll("#tierFilterButtons button").forEach(btn => {
+        const isActive = (tier === "ALL" && btn.textContent.includes("Összes")) || btn.textContent.includes(tier);
+        if (isActive) {
+          btn.classList.add("ring-2", "ring-tm-p1");
+        } else {
+          btn.classList.remove("ring-2", "ring-tm-p1");
+        }
+      });
+      renderCampaignComparison();
+    }
+
+    function renderCampaignComparison() {
+      const { players, campaign } = appState.data;
+      if (!campaign) return;
+
+      document.getElementById("campTitleLabel").textContent = campaign.name;
+      document.getElementById("campTrackCountLabel").textContent = `${campaign.tracks.length} hivatalos pálya`;
+
+      // Kampány összesített statisztika a 3 barát között
+      const trioStats = {};
+      players.forEach(p => {
+        trioStats[p.accountId] = { player: p, crowns: 0, atCount: 0, sharedTimeMs: 0, playedCount: 0 };
+      });
+
+      let sharedMapsCount = 0;
+
+      campaign.tracks.forEach(track => {
+        const validRuns = players
+          .map(p => {
+            const rec = track.playerTimes?.[p.accountId];
+            return rec && rec.timeMs ? { player: p, timeMs: rec.timeMs } : null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.timeMs - b.timeMs);
+
+        if (validRuns.length > 0) {
+          trioStats[validRuns[0].player.accountId].crowns++;
+        }
+
+        const allThreeFinished = validRuns.length === 3;
+        if (allThreeFinished) sharedMapsCount++;
+
+        validRuns.forEach(r => {
+          const st = trioStats[r.player.accountId];
+          st.playedCount++;
+          if (r.timeMs <= track.authorScore) st.atCount++;
+          if (allThreeFinished) st.sharedTimeMs += r.timeMs;
+        });
+      });
+
+      document.getElementById("sharedMapsBadge").textContent = `${sharedMapsCount} közös pálya alapján`;
+
+      const sortedBySharedTime = Object.values(trioStats).sort((a, b) => (a.sharedTimeMs || 99999999) - (b.sharedTimeMs || 99999999));
+      const bestSharedTime = sortedBySharedTime[0]?.sharedTimeMs || 0;
+
+      document.getElementById("campaignTrioSummaryRow").innerHTML = Object.values(trioStats).map(st => {
+        const diff = st.sharedTimeMs - bestSharedTime;
+        return `
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:${st.player.color}"></span>
+                <span class="font-bold text-xs text-white">${st.player.displayName}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-1 font-mono">
+                <span class="text-amber-400 font-bold"><i class="fa-solid fa-crown mr-1"></i>${st.crowns} korona</span> •
+                <span class="text-emerald-400">${st.atCount} AT</span>
+              </div>
+            </div>
+            <div class="text-right font-mono">
+              <div class="text-xs font-bold text-white">${st.sharedTimeMs > 0 ? formatMs(st.sharedTimeMs) : "--:--.---"}</div>
+              <div class="text-[10px] ${diff === 0 && st.sharedTimeMs > 0 ? "text-emerald-400" : "text-rose-400"}">
+                ${st.sharedTimeMs > 0 ? (diff === 0 ? "Összidő #1" : formatDelta(diff)) : `${st.playedCount}/25 pálya`}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Pályák listázása
+      const filteredTracks = campaign.tracks.filter(t => appState.tierFilter === "ALL" || t.tier === appState.tierFilter);
+
+      document.getElementById("campaignTracksContainer").innerHTML = filteredTracks.map(track => {
+        const runs = players.map(p => ({
+          player: p,
+          rec: track.playerTimes?.[p.accountId] || null
+        }));
+
+        const validTimes = runs.filter(r => r.rec && r.rec.timeMs).map(r => r.rec.timeMs);
+        const bestTime = validTimes.length > 0 ? Math.min(...validTimes) : null;
+
+        const playerBoxesHtml = runs.map(({ player, rec }) => {
+          if (!rec || !rec.timeMs) {
+            return `
+              <div class="p-3 rounded-xl bg-slate-950/40 border border-slate-800/60 flex items-center justify-between opacity-60">
+                <span class="text-xs font-semibold" style="color:${player.color}">${player.displayName}</span>
+                <span class="text-[11px] font-mono text-slate-500">Nincs rögzített PB</span>
+              </div>
+            `;
+          }
+
+          const isWinner = rec.timeMs === bestTime;
+          const deltaFirst = rec.timeMs - bestTime;
+          const deltaAT = rec.timeMs - track.authorScore;
+          const medal = getMedalType(rec.timeMs, track);
+
+          return `
+            <div class="p-3 rounded-xl bg-slate-950/90 border ${isWinner ? "border-amber-400/60 shadow-lg shadow-amber-500/5" : "border-slate-800"} flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full" style="background:${player.color}"></span>
+                  <span class="font-bold text-xs text-white">${player.displayName}</span>
+                  ${isWinner ? '<i class="fa-solid fa-crown text-amber-400 text-xs ml-1" title="Házi Pályarekord"></i>' : ""}
+                </div>
+                <div class="flex items-center gap-1.5">
+                  ${rec.position ? `<span class="text-[10px] font-mono text-slate-400">WR #${formatNumber(rec.position)}</span>` : ""}
+                  ${medal ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold medal-${medal}">${medal}</span>` : ""}
+                </div>
+              </div>
+
+              <div class="mt-2 flex items-baseline justify-between font-mono">
+                <span class="text-base font-bold text-white">${formatMs(rec.timeMs)}</span>
+                <span class="text-xs font-bold ${isWinner ? "text-emerald-400" : "text-rose-400"}">
+                  ${isWinner ? "REKORD" : formatDelta(deltaFirst)}
+                </span>
+              </div>
+
+              <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                <span>AT Delta: <strong class="${deltaAT <= 0 ? "text-emerald-400" : "text-slate-300"}">${formatDelta(deltaAT)}</strong></span>
+                ${rec.ghostUrl ? `<a href="${rec.ghostUrl}" target="_blank" class="text-tm-p2 hover:underline"><i class="fa-solid fa-download mr-0.5"></i>Ghost</a>` : ""}
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div class="bg-tm-card border border-tm-border rounded-2xl p-4 tier-${track.tier}">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3 pb-2.5 border-b border-slate-800/80">
+              <div class="flex items-center gap-3">
+                ${track.thumbnailUrl ? `<img src="${track.thumbnailUrl}" alt="${track.cleanName}" class="w-12 h-8 object-cover rounded-lg border border-slate-700 hidden sm:block">` : ""}
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-display font-bold text-base text-white">${track.cleanName}</span>
+                    <a href="https://trackmania.io/#/leaderboard/${track.mapUid}" target="_blank" class="text-[11px] font-mono text-slate-400 hover:text-white" title="Megnyitás Trackmania.io-n">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                  </div>
+                  <div class="text-[11px] font-mono text-slate-400">
+                    Author: <span class="text-slate-300">${track.authorName}</span>
+                    ${track.wrTime ? ` • WR: <span class="text-amber-300 font-bold">${formatMs(track.wrTime)}</span> (${track.wrHolder || "WR"})` : ""}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Medál szintidők (Trackmania.io adatok) -->
+              <div class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">AT: ${formatMs(track.authorScore)}</span>
+                <span class="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 hidden md:inline">Gold: ${formatMs(track.goldScore)}</span>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hidden lg:inline">Silver: ${formatMs(track.silverScore)}</span>
+              </div>
+            </div>
+
+            <!-- 3 Barát Időeredményei Egymás Mellett -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${playerBoxesHtml}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // --- 4.3 CUP OF THE DAY (COTD) & RANKED 3v3 / ROYAL ---
+    function renderCotdAndMatchmaking() {
+      const players = appState.data.players;
+
+      // COTD 3-as Összehasonlító Grid
+      document.getElementById("cotdComparisonGrid").innerHTML = players.map(p => {
+        const c = p.cotd;
+        if (!c || c.totalPlayed === 0) {
+          return `
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+              <div class="font-display font-bold text-base text-white" style="color:${p.color}">${p.displayName}</div>
+              <div class="text-xs text-slate-500 mt-2">Még nincs rögzített Cup of the Day részvétele a Trackmania.io-n.</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3" style="border-top: 3px solid ${p.color}">
+            <div class="flex items-center justify-between">
+              <span class="font-display font-bold text-lg text-white">${p.displayName}</span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-400">
+                ${c.totalPlayed} COTD lejátszva
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 font-mono text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800/80">
+                <div class="text-[10px] text-slate-400">Átlag Divízió</div>
+                <div class="text-base font-bold text-white mt-0.5">Div ${c.averageDiv ?? "-"}</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800/80">
+                <div class="text-[10px] text-slate-400">Legjobb Div / Hely</div>
+                <div class="text-base font-bold text-emerald-400 mt-0.5">Div ${c.bestDiv ?? "-"} (#${c.bestRank ?? "-"})</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800/80">
+                <div class="text-[10px] text-slate-400">Divízió Győzelmek</div>
+                <div class="text-sm font-bold text-amber-400 mt-0.5">${c.totalDivWins} db (Div1: ${c.totalWins})</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800/80">
+                <div class="text-[10px] text-slate-400">Átlag Top %</div>
+                <div class="text-sm font-bold text-cyan-400 mt-0.5">Top ${c.averageRankPct ?? "-"}%</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // 3v3 Matchmaking & Royal
+      document.getElementById("matchmakingCardsContainer").innerHTML = players.map(p => {
+        const m3 = p.matchmaking?.ranked3v3;
+        const mr = p.matchmaking?.royal;
+        return `
+          <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div class="font-bold text-sm text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:${p.color}"></span>
+                ${p.displayName}
+              </div>
+              <div class="text-xs text-slate-400 mt-1 font-mono">
+                3v3 Divízió: <strong class="text-white">${m3?.divisionName || "Unranked"}</strong> •
+                MVP: <strong class="text-amber-400">${m3?.mvp ?? 0}</strong>
+              </div>
+            </div>
+            <div class="text-right font-mono">
+              <div class="text-sm font-bold text-tm-p1">${formatNumber(m3?.progression ?? 0)} MMR</div>
+              <div class="text-[11px] text-slate-400">
+                3v3 Rank: #${formatNumber(m3?.rank)} ${mr ? `• Royal Wins: ${mr.wins}` : ""}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Legutóbbi COTD részvételek egyesített listája
+      const allRecentCups = [];
+      players.forEach(p => {
+        (p.cotd?.recentCups || []).forEach(cup => {
+          allRecentCups.push({ player: p, cup });
+        });
+      });
+      allRecentCups.sort((a, b) => new Date(b.cup.timestamp) - new Date(a.cup.timestamp));
+
+      document.getElementById("recentCotdListContainer").innerHTML = allRecentCups.length > 0
+        ? allRecentCups.slice(0, 12).map(({ player, cup }) => `
+            <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between text-xs">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold" style="color:${player.color}">${player.displayName}</span>
+                  <span class="text-slate-300 font-semibold">${cup.name}</span>
+                </div>
+                <div class="text-[10px] font-mono text-slate-500 mt-0.5">
+                  ${cup.timestamp ? new Date(cup.timestamp).toLocaleDateString("hu-HU") : ""} • ${formatNumber(cup.totalPlayers)} induló
+                </div>
+              </div>
+              <div class="text-right font-mono">
+                <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                  Div ${cup.div} (#${cup.divRank})
+                </span>
+                <div class="text-[10px] text-slate-400 mt-0.5">Összetett: #${cup.rank}</div>
+              </div>
+            </div>
+          `).join("")
+        : `<div class="text-xs text-slate-500 py-6 text-center">Nincs legutóbbi COTD adat.</div>`;
+    }
+
+    // --- 4.4 TRÓFEÁK (T1–T9) RÉSZLETES LEBONTÁSA ---
+    function renderTrophiesBreakdown() {
+      const players = appState.data.players;
+      players.forEach((p, i) => {
+        const th = document.getElementById(`trCol${i + 1}`);
+        if (th) {
+          th.textContent = p.displayName;
+          th.style.color = p.color;
+        }
+      });
+
+      const trophyMeta = [
+        { level: "Trophy 9 (Radiant)", pts: "100 000 000", color: "text-rose-400" },
+        { level: "Trophy 8 (Gold 2)", pts: "10 000 000", color: "text-amber-300" },
+        { level: "Trophy 7 (Gold 1)", pts: "1 000 000", color: "text-amber-400" },
+        { level: "Trophy 6 (Silver 3)", pts: "100 000", color: "text-cyan-300" },
+        { level: "Trophy 5 (Silver 2)", pts: "10 000", color: "text-slate-200" },
+        { level: "Trophy 4 (Silver 1)", pts: "1 000", color: "text-slate-300" },
+        { level: "Trophy 3 (Bronze 3)", pts: "100", color: "text-orange-300" },
+        { level: "Trophy 2 (Bronze 2)", pts: "10", color: "text-orange-400" },
+        { level: "Trophy 1 (Bronze 1)", pts: "1", color: "text-orange-500" }
+      ];
+
+      document.getElementById("trophyBreakdownTableBody").innerHTML = trophyMeta.map((meta, idx) => {
+        const tIndex = 8 - idx; // counts[8] = T9 ... counts[0] = T1
+        const vals = players.map(p => p.trophies.counts?.[tIndex] || 0);
+        const maxVal = Math.max(...vals);
+
+        return `
+          <tr class="hover:bg-slate-900/40">
+            <td class="py-3 px-4 font-sans font-semibold ${meta.color}">${meta.level}</td>
+            <td class="py-3 px-4 text-slate-400">${meta.pts} pt</td>
+            ${vals.map(v => `
+              <td class="py-3 px-4 text-right ${v === maxVal && v > 0 ? "font-bold text-white" : "text-slate-400"}">
+                ${formatNumber(v)} db
+              </td>
+            `).join("")}
+          </tr>
+        `;
+      }).join("");
+
+      // Chart.js Trófea összehasonlítás (T4, T5, T6, T7)
+      const ctx = document.getElementById("trophyBarChart").getContext("2d");
+      if (appState.trophyChart) appState.trophyChart.destroy();
+      appState.trophyChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["T4 (1K)", "T5 (10K)", "T6 (100K)", "T7 (1M)"],
+          datasets: players.map(p => ({
+            label: p.displayName,
+            data: [
+              p.trophies.counts?.[3] || 0,
+              p.trophies.counts?.[4] || 0,
+              p.trophies.counts?.[5] || 0,
+              p.trophies.counts?.[6] || 0
+            ],
+            backgroundColor: p.color
+          }))
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+            y: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } }
+          },
+          plugins: {
+            legend: { labels: { color: "#f8fafc" } }
+          }
+        }
+      });
+
+      // Legutóbbi Trófeaszerzések Feed
+      const allGains = [];
+      players.forEach(p => {
+        (p.trophies.recentGains || []).forEach(g => allGains.push({ player: p, gain: g }));
+      });
+      allGains.sort((a, b) => new Date(b.gain.timestamp) - new Date(a.gain.timestamp));
+
+      document.getElementById("recentTrophyGainsFeed").innerHTML = allGains.length > 0
+        ? allGains.slice(0, 8).map(({ player, gain }) => `
+            <div class="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs">
+              <div>
+                <span class="font-bold" style="color:${player.color}">${player.displayName}</span>
+                <span class="text-slate-400 ml-1">${gain.achievement?.type || "Ranglista jutalom"}</span>
+              </div>
+              <span class="font-mono font-bold text-emerald-400">+${formatNumber(gain.points)} pt</span>
+            </div>
+          `).join("")
+        : `<div class="text-xs text-slate-500">Nincs friss trófeaszerzés.</div>`;
+    }
+
+    // =========================================================================
+    // 5. NAVIGÁCIÓ ÉS ACCOUNT ID KONFIGURÁCIÓS MODAL
+    // =========================================================================
+    function switchTab(tab) {
+      ["profiles", "campaign", "cotd", "trophies"].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle("hidden", t !== tab);
+
+        const dBtn = document.getElementById(`dtab-${t}`);
+        if (dBtn) {
+          dBtn.className = t === tab
+            ? "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-black transition-all"
+            : "px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all";
+        }
+
+        const mBtn = document.getElementById(`mtab-${t}`);
+        if (mBtn) {
+          mBtn.className = t === tab
+            ? "flex flex-col items-center justify-center py-1 text-tm-p1"
+            : "flex flex-col items-center justify-center py-1 text-slate-400";
+        }
+      });
+    }
+
+    function openConfigModal() {
+      document.getElementById("inputP1Id").value = appState.playerIds[0] || "";
+      document.getElementById("inputP2Id").value = appState.playerIds[1] || "";
+      document.getElementById("inputP3Id").value = appState.playerIds[2] || "";
+      const modal = document.getElementById("configModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeConfigModal() {
+      const modal = document.getElementById("configModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function savePlayerIds(e) {
+      e.preventDefault();
+      const id1 = document.getElementById("inputP1Id").value.trim();
+      const id2 = document.getElementById("inputP2Id").value.trim();
+      const id3 = document.getElementById("inputP3Id").value.trim();
+      appState.playerIds = [id1, id2, id3];
+      localStorage.setItem(STORAGE_IDS_KEY, JSON.stringify(appState.playerIds));
+      closeConfigModal();
+      syncFromTrackmaniaIo(true);
+    }
+
+    // =========================================================================
+    // 6. HITELES TRACKMANIA.IO SÉMA TARTALÉK ADATOK (LOKÁLIS TESZTELÉSHEZ)
+    // =========================================================================
+    function getAuthenticTmioFallbackData() {
+      const p1Id = appState.playerIds[0];
+      const p2Id = appState.playerIds[1];
+      const p3Id = appState.playerIds[2];
+
+      return {
+        status: "ok",
+        fetchedAt: new Date().toISOString(),
+        players: [
+          {
+            accountId: p1Id,
+            displayName: "Dani.TM",
+            clubTag: "$s$0f8HUN",
+            firstSeen: "2021-06-14T18:20:00Z",
+            color: "#00ff88",
+            meta: { twitch: "danitm" },
+            trophies: {
+              points: 14825410,
+              echelon: 6,
+              counts: [4120, 1890, 640, 215, 68, 21, 2, 1, 0],
+              zones: [
+                { name: "Fejér", position: 4 },
+                { name: "Hungary", position: 48 },
+                { name: "Europe", position: 3890 },
+                { name: "World", position: 6412 }
+              ],
+              recentGains: [{ timestamp: "2026-11-01T20:00:00Z", points: 125000, achievement: { type: "COTD" } }]
+            },
+            matchmaking: {
+              ranked3v3: { progression: 2480, rank: 1920, mvp: 84, divisionName: "Gold III" },
+              royal: { progression: 1200, rank: 4100, wins: 14, divisionName: "Gold I" }
+            },
+            cotd: {
+              totalPlayed: 94,
+              totalWins: 0,
+              totalDivWins: 5,
+              averageDiv: 8.4,
+              averageRankPct: 16.2,
+              bestRank: 112,
+              bestDiv: 2,
+              recentCups: [
+                { id: 1920, name: "COTD 2026-11-02 #1", timestamp: "2026-11-02T19:00:00Z", div: 6, rank: 342, divRank: 22, totalPlayers: 2410 },
+                { id: 1918, name: "COTD 2026-10-31 #1", timestamp: "2026-10-31T19:00:00Z", div: 5, rank: 261, divRank: 5, totalPlayers: 2580 }
+              ]
+            }
+          },
+          {
+            accountId: p2Id,
+            displayName: "Máté_Drift",
+            clubTag: "$s$0efAPEX",
+            firstSeen: "2022-01-09T14:10:00Z",
+            color: "#00e5ff",
+            meta: {},
+            trophies: {
+              points: 9640120,
+              echelon: 5,
+              counts: [3510, 1420, 510, 180, 54, 19, 7, 0, 0],
+              zones: [
+                { name: "Fejér", position: 9 },
+                { name: "Hungary", position: 89 },
+                { name: "Europe", position: 6120 },
+                { name: "World", position: 10240 }
+              ],
+              recentGains: [{ timestamp: "2026-10-30T20:00:00Z", points: 64000, achievement: { type: "Official Campaign" } }]
+            },
+            matchmaking: {
+              ranked3v3: { progression: 2690, rank: 1240, mvp: 112, divisionName: "Master I" },
+              royal: { progression: 900, rank: 8200, wins: 6, divisionName: "Silver III" }
+            },
+            cotd: {
+              totalPlayed: 78,
+              totalWins: 0,
+              totalDivWins: 3,
+              averageDiv: 10.1,
+              averageRankPct: 21.4,
+              bestRank: 198,
+              bestDiv: 4,
+              recentCups: [
+                { id: 1920, name: "COTD 2026-11-02 #1", timestamp: "2026-11-02T19:00:00Z", div: 9, rank: 524, divRank: 12, totalPlayers: 2410 }
+              ]
+            }
+          },
+          {
+            accountId: p3Id,
+            displayName: "BenceFS",
+            clubTag: "$s$f36ICE",
+            firstSeen: "2021-11-22T21:00:00Z",
+            color: "#ff3366",
+            meta: {},
+            trophies: {
+              points: 7420800,
+              echelon: 5,
+              counts: [2980, 1210, 430, 140, 48, 18, 5, 0, 0],
+              zones: [
+                { name: "Budapest", position: 31 },
+                { name: "Hungary", position: 118 },
+                { name: "Europe", position: 8410 },
+                { name: "World", position: 14190 }
+              ],
+              recentGains: []
+            },
+            matchmaking: {
+              ranked3v3: { progression: 2110, rank: 3890, mvp: 51, divisionName: "Gold I" },
+              royal: { progression: 1650, rank: 1850, wins: 29, divisionName: "Master I" }
+            },
+            cotd: {
+              totalPlayed: 62,
+              totalWins: 0,
+              totalDivWins: 4,
+              averageDiv: 11.6,
+              averageRankPct: 24.8,
+              bestRank: 245,
+              bestDiv: 4,
+              recentCups: [
+                { id: 1919, name: "COTD 2026-11-01 #1", timestamp: "2026-11-01T19:00:00Z", div: 8, rank: 460, divRank: 4, totalPlayers: 2390 }
+              ]
+            }
+          }
+        ],
+        campaign: {
+          id: 84,
+          name: "Fall 2026",
+          tracks: [
+            {
+              index: 1, cleanName: "Fall 2026 - 01", authorName: "Nadeo", tier: "White",
+              authorScore: 24520, goldScore: 26000, silverScore: 29000, bronzeScore: 35000,
+              wrTime: 23412, wrHolder: "Mudda",
+              playerTimes: {
+                [p1Id]: { timeMs: 24110, position: 842 },
+                [p2Id]: { timeMs: 24380, position: 1420 },
+                [p3Id]: { timeMs: 24515, position: 2190 }
+              }
+            },
+            {
+              index: 6, cleanName: "Fall 2026 - 06", authorName: "Nadeo", tier: "Green",
+              authorScore: 34890, goldScore: 37000, silverScore: 40500, bronzeScore: 47000,
+              wrTime: 33105, wrHolder: "CarlJr",
+              playerTimes: {
+                [p1Id]: { timeMs: 34610, position: 1120 },
+                [p2Id]: { timeMs: 34290, position: 615 },
+                [p3Id]: { timeMs: 35120, position: 3410 }
+              }
+            },
+            {
+              index: 12, cleanName: "Fall 2026 - 12", authorName: "Nadeo", tier: "Blue",
+              authorScore: 45200, goldScore: 48000, silverScore: 52000, bronzeScore: 60000,
+              wrTime: 42980, wrHolder: "Binkss",
+              playerTimes: {
+                [p1Id]: { timeMs: 45190, position: 1890 },
+                [p2Id]: { timeMs: 45640, position: 3120 },
+                [p3Id]: { timeMs: 44820, position: 790 }
+              }
+            },
+            {
+              index: 18, cleanName: "Fall 2026 - 18", authorName: "Nadeo", tier: "Red",
+              authorScore: 54600, goldScore: 58000, silverScore: 63000, bronzeScore: 72000,
+              wrTime: 51890, wrHolder: "Gwen",
+              playerTimes: {
+                [p1Id]: { timeMs: 54120, position: 980 },
+                [p2Id]: { timeMs: 54590, position: 1750 },
+                [p3Id]: { timeMs: 55410, position: 4120 }
+              }
+            },
+            {
+              index: 21, cleanName: "Fall 2026 - 21", authorName: "Nadeo", tier: "Black",
+              authorScore: 62400, goldScore: 66500, silverScore: 72000, bronzeScore: 84000,
+              wrTime: 59112, wrHolder: "Otaaaq",
+              playerTimes: {
+                [p1Id]: { timeMs: 62150, position: 640 },
+                [p2Id]: { timeMs: 62890, position: 1940 },
+                [p3Id]: { timeMs: 63410, position: 2980 }
+              }
+            }
+          ]
+        }
+      };
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      switchTab("profiles");
+      syncFromTrackmaniaIo(false);
+    });
+  </script>
+</body>
+</html>
