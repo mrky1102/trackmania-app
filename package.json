@@ -1,9 +1,0 @@
-{
-  "name": "tmio-trio-telemetry",
-  "version": "1.0.0",
-  "description": "Trackmania.io 3-Player Live Telemetry & Comparison Webapp",
-  "private": true,
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}
