@@ -9,15 +9,15 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 // Példaként 3 valós formátumú Trackmania Account UUID van megadva:
 const DEFAULT_PLAYERS = [
   {
-    id: process.env.TM_PLAYER_1_ID || "26d9a7de-4067-4926-9d93-2fe622869fc7",
+    id: process.env.TM_PLAYER_1_ID || "11a8675e-a5ab-4b76-9c03-c3e96d39534b",
     color: "#00ff88"
   },
   {
-    id: process.env.TM_PLAYER_2_ID || "d320a238-1f3a-4668-a770-7218b6204c59",
+    id: process.env.TM_PLAYER_2_ID || "968c7f56-8c32-4f19-8116-d1ab10fafc59",
     color: "#00e5ff"
   },
   {
-    id: process.env.TM_PLAYER_3_ID || "58c38c8e-9b7a-4e36-8a45-4c876e57b654",
+    id: process.env.TM_PLAYER_3_ID || "e0abfb46-0151-4816-b25c-a47846a17843",
     color: "#ff3366"
   }
 ];
